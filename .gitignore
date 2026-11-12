@@ -27,5 +27,5 @@ Thumbs.db
 .vscode/
 .idea/
 
-# результаты-таблицы в csv коммитим явно
-!results/tables/*.csv
+# метрики коммитим
+!results/*.csv

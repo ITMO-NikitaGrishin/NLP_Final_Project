@@ -38,6 +38,7 @@ def filter_subset(
 ) -> pd.DataFrame:
     """Подвыборка по условиям статьи IACIS 2022 (12 стран, 26 сортов, 12 дегустаторов).
 
+    Ожидает очищенный датафрейм (после clean(), т. е. только строки с ценой).
     Конкретные списки нужно взять из статьи.
     """
     mask = (
@@ -46,3 +47,18 @@ def filter_subset(
         & df["taster_name"].isin(tasters)
     )
     return df[mask].reset_index(drop=True)
+
+
+def points_to_class(points: pd.Series, n_classes: int) -> pd.Series:
+    """Классы оценок как в Journal of Wine Economics 2022.
+
+    2 класса: 0 = 80–89, 1 = 90+.
+    4 класса: 0 = 80–84, 1 = 85–89, 2 = 90–94, 3 = 95–100.
+    """
+    if n_classes == 2:
+        bins = [-np.inf, 89, np.inf]
+    elif n_classes == 4:
+        bins = [-np.inf, 84, 89, 94, np.inf]
+    else:
+        raise ValueError("n_classes должно быть 2 или 4")
+    return pd.cut(points, bins=bins, labels=False).astype(int)
