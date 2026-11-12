@@ -29,3 +29,7 @@ Thumbs.db
 
 # метрики коммитим
 !results/*.csv
+
+# claude code
+CLAUDE.md
+.claude/
