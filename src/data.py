@@ -49,6 +49,21 @@ def filter_subset(
     return df[mask].reset_index(drop=True)
 
 
+IACIS_TOP_N = {"country": 12, "variety": 26, "taster_name": 12}
+
+
+def iacis_categories(df: pd.DataFrame) -> dict[str, list[str]]:
+    """Приближение условий IACIS 2022: самые частые страны/сорта/дегустаторы.
+
+    Точных списков из статьи у нас нет, поэтому берём top-N по частоте
+    в очищенных данных (12 стран, 26 сортов, 12 дегустаторов).
+    """
+    return {
+        col: df[col].value_counts().head(n).index.tolist()
+        for col, n in IACIS_TOP_N.items()
+    }
+
+
 def points_to_class(points: pd.Series, n_classes: int) -> pd.Series:
     """Классы оценок как в Journal of Wine Economics 2022.
 

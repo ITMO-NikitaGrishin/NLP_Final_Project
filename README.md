@@ -44,10 +44,11 @@
 ├── data/
 │   └── download.py    # загрузка датасета с Kaggle (сами данные не коммитятся)
 ├── notebooks/
+│   ├── 00_data_prep.ipynb       # очистка, сплиты train/val/test, подвыборка IACIS
 │   ├── 01_eda.ipynb             # статистика, распределения оценок, цен и длин текстов
 │   ├── 02_baselines.ipynb       # эксперименты 1–3
 │   ├── 03_embeddings.ipynb      # эксперимент 4
-│   ├── 04_transformer.ipynb     # эксперименты 5–6 (Kaggle / Colab, GPU)
+│   ├── 04_transformer.ipynb     # эксперименты 5–6 (локальная GPU)
 │   └── 05_interpretation.ipynb  # эксперименты 7–9
 ├── src/
 │   ├── config.py      # пути, seed, названия колонок
@@ -63,12 +64,13 @@
 
 ## Как запустить
 
-### Локально (ноутбуки 01–03, 05)
-
 ```bash
 python -m venv .venv
 source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
+
+# torch с поддержкой CUDA (нужна для ноутбука 04; RTX 50xx требует CUDA 12.8+)
+pip install --force-reinstall --no-deps torch --index-url https://download.pytorch.org/whl/cu130
 
 python data/download.py          # нужен Kaggle API токен (~/.kaggle/kaggle.json)
 jupyter notebook notebooks/
@@ -76,11 +78,7 @@ jupyter notebook notebooks/
 
 Ноутбуки выполняются по порядку. При первом вызове `load_splits()` разбиение сохраняется в `data/processed/`, и дальше все ноутбуки используют его.
 
-### Kaggle / Colab (ноутбук 04)
-
-Откройте `notebooks/04_transformer.ipynb` в Kaggle или Colab и включите GPU. Первая ячейка сама клонирует репозиторий и установит зависимости.
-- **Kaggle:** подключите датасет `zynicide/wine-reviews` через *Add Input*. Скачивать его не нужно.
-- **Colab:** данные скачаются через `kagglehub`, для этого нужен Kaggle API токен.
+RoBERTa-base (`04_transformer`) обучалась локально на NVIDIA RTX 5060 (8 ГБ) в режиме fp16.
 
 ## Результаты
 

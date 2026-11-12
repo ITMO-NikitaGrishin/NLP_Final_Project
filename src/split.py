@@ -42,3 +42,32 @@ def load_splits() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
 
         save_splits(*make_splits(load_clean()))
     return tuple(pd.read_parquet(p) for p in paths)
+
+
+def load_iacis_splits(
+    rebuild: bool = False,
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """Подвыборка IACIS 2022, отфильтрованная из основных сплитов.
+
+    Строки остаются в той же части (train/val/test), что и в основном
+    разбиении, поэтому test подвыборки не пересекается с train основных моделей.
+    """
+    from .data import filter_subset, iacis_categories
+
+    path = DATA_PROCESSED / "iacis.parquet"
+    if rebuild or not path.exists():
+        train, val, test = load_splits()
+        full = pd.concat(
+            [p.assign(split=n) for n, p in
+             {"train": train, "val": val, "test": test}.items()]
+        )
+        cats = iacis_categories(full)
+        subset = filter_subset(
+            full, cats["country"], cats["variety"], cats["taster_name"]
+        )
+        subset.to_parquet(path)
+    subset = pd.read_parquet(path)
+    return tuple(
+        subset[subset["split"] == n].drop(columns="split").reset_index(drop=True)
+        for n in ("train", "val", "test")
+    )

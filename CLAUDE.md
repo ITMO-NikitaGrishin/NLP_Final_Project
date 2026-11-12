@@ -43,5 +43,5 @@ Wine Reviews, Kaggle: https://www.kaggle.com/datasets/zynicide/wine-reviews
 - Python, pandas, scikit-learn, catboost, transformers, sentence-transformers, shap
 - общий код выносить в src/, ноутбуки только импортируют его
 - все результаты метрик сохранять в results/metrics.csv: эксперимент, таргет, метрика, значение
-- трансформеры обучаются на GPU в Kaggle или Colab, поэтому ноутбук 04 должен запускаться там
+- трансформеры обучаются локально на GPU (RTX 5060, 8 ГБ): учитывать лимит памяти (fp16, умеренный batch, max_length ~128–256)
 - делать по одному этапу за раз и показывать результат перед следующим
