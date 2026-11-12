@@ -1,0 +1,22 @@
+numpy>=1.26
+pandas>=2.1
+scikit-learn>=1.4
+scipy>=1.11
+matplotlib>=3.8
+seaborn>=0.13
+tqdm>=4.66
+jupyter>=1.0
+kagglehub>=0.3
+
+# boosting & embeddings
+catboost>=1.2
+sentence-transformers>=3.0
+
+# transformer
+torch>=2.2
+transformers>=4.44
+datasets>=2.20
+accelerate>=0.33
+
+# interpretation
+shap>=0.45

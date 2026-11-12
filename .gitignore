@@ -1,0 +1,31 @@
+# data — не коммитим
+data/raw/
+data/processed/
+*.csv
+*.zip
+*.parquet
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+
+# jupyter
+.ipynb_checkpoints/
+
+# models / caches
+models/
+checkpoints/
+wandb/
+mlruns/
+
+# os / ide
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# результаты-таблицы в csv коммитим явно
+!results/tables/*.csv
