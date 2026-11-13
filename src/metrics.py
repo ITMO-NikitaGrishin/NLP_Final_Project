@@ -64,6 +64,15 @@ def log_metrics(experiment: str, target: str, metrics: dict[str, float]) -> pd.D
     return df
 
 
+def save_predictions(experiment: str, target: str, index, y_true, y_pred) -> None:
+    """Сохраняет предсказания на test в results/predictions/ для анализа ошибок (этап 9)."""
+    out = METRICS_FILE.parent / "predictions"
+    out.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame({"y_true": np.asarray(y_true), "y_pred": np.asarray(y_pred)}, index=index).to_parquet(
+        out / f"{experiment}__{target}.parquet"
+    )
+
+
 def results_table(target: str) -> pd.DataFrame:
     """Сводная таблица эксперимент × метрика для одного таргета."""
     df = load_metrics()
