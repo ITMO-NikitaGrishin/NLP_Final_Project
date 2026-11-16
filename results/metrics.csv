@@ -35,3 +35,15 @@ emb_meta_catboost,points,R2,0.7206374910428146
 emb_meta_catboost,log_price,RMSE,0.3628384884095373
 emb_meta_catboost,log_price,MAE,0.27008037490531234
 emb_meta_catboost,log_price,R2,0.6971658643415799
+roberta_text,points,RMSE,1.4826339147853076
+roberta_text,points,MAE,1.1595022678375244
+roberta_text,points,R2,0.7712281942367554
+roberta_text,log_price,RMSE,0.43954817653649597
+roberta_text,log_price,MAE,0.33534040531321624
+roberta_text,log_price,R2,0.5555825583204104
+roberta_meta,points,RMSE,1.3415731051896869
+roberta_meta,points,MAE,1.045946717262268
+roberta_meta,points,R2,0.812688946723938
+roberta_meta,log_price,RMSE,0.355123288235366
+roberta_meta,log_price,MAE,0.26558993782599183
+roberta_meta,log_price,R2,0.7099075431035508
