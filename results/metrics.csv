@@ -117,3 +117,7 @@ roberta_text,class4,Accuracy,0.783723223088644
 roberta_text,class4,F1_macro,0.6960772117230208
 roberta_meta,class4,Accuracy,0.8078336470377342
 roberta_meta,class4,F1_macro,0.7367147387679478
+roberta_cls2,class2,Accuracy,0.8627767320964417
+roberta_cls2,class2,F1_macro,0.8534402067981948
+roberta_cls4,class4,Accuracy,0.7861432284664336
+roberta_cls4,class4,F1_macro,0.7035023615112259

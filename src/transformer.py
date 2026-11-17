@@ -1,8 +1,11 @@
-"""Дообучение трансформера (RoBERTa-base) на регрессию, эксперименты 5–6.
+"""Дообучение трансформера (RoBERTa-base): регрессия (эксперименты 5–6) и классификация оценки (эксперимент 8).
 
-Одна модель предсказывает оба таргета сразу (points и log_price): голова с двумя выходами,
+Регрессия: одна модель предсказывает оба таргета сразу (points и log_price): голова с двумя выходами,
 таргеты стандартизованы по train, лосс — сумма MSE. Так вдвое меньше прогонов на 8-гигабайтной GPU,
 а текстовое представление общее для обоих таргетов.
+
+Классификация: отдельная модель на каждую постановку (2 или 4 класса), cross-entropy,
+отбор чекпойнта по accuracy на val.
 """
 from __future__ import annotations
 
@@ -61,7 +64,12 @@ class TrainConfig:
 class _TextDataset(Dataset):
     def __init__(self, texts, targets=None):
         self.texts = list(texts)
-        self.targets = None if targets is None else np.asarray(targets, dtype=np.float32)
+        if targets is None:
+            self.targets = None
+        else:
+            targets = np.asarray(targets)
+            # классы -> int64 для cross-entropy, регрессия -> float32
+            self.targets = targets.astype(np.int64 if np.issubdtype(targets.dtype, np.integer) else np.float32)
 
     def __len__(self):
         return len(self.texts)
@@ -118,17 +126,12 @@ def predict_scaled(model, tokenizer, texts, cfg: TrainConfig) -> np.ndarray:
     return res
 
 
-def train_regressor(
-    train_texts,
-    y_train: np.ndarray,
-    val_texts,
-    y_val: np.ndarray,
-    cfg: TrainConfig,
-    run_name: str,
-):
-    """Дообучает модель на стандартизованных таргетах (n × k), отбор лучшего чекпойнта по val MSE.
+def _fine_tune(train_texts, train_targets, val_texts, val_eval, loss_fn, num_labels, problem_type,
+               cfg: TrainConfig, run_name: str):
+    """Общий цикл дообучения для регрессии и классификации.
 
-    Возвращает (model, tokenizer, scaler, history). Лучшие веса сохраняются в models/<run_name>/.
+    val_eval(logits_val) -> (критерий отбора, меньше = лучше; dict метрик для истории).
+    Лучший по критерию чекпойнт сохраняется в models/<run_name>/ и возвращается вместе с историей.
     """
     from transformers import (
         AutoModelForSequenceClassification,
@@ -139,17 +142,13 @@ def train_regressor(
     torch.manual_seed(cfg.seed)
     np.random.seed(cfg.seed)
 
-    y_train, y_val = np.asarray(y_train, np.float32), np.asarray(y_val, np.float32)
-    n_targets = y_train.shape[1]
-    scaler = Scaler(y_train)
-
     tokenizer = AutoTokenizer.from_pretrained(cfg.model_name)
     model = AutoModelForSequenceClassification.from_pretrained(
-        cfg.model_name, num_labels=n_targets, problem_type="regression"
+        cfg.model_name, num_labels=num_labels, problem_type=problem_type
     ).to("cuda")
 
     train_dl = _loader(
-        _TextDataset(train_texts, scaler.transform(y_train)),
+        _TextDataset(train_texts, train_targets),
         tokenizer, cfg.batch_size, cfg.max_length, True, cfg.seed,
     )
     # у свежей головы lr выше, чем у предобученного энкодера
@@ -170,7 +169,6 @@ def train_regressor(
     out_dir = MODELS_DIR / run_name
     best, history, step, t0, running = math.inf, [], 0, time.time(), []
     val_texts = list(val_texts)
-    y_val_s = scaler.transform(y_val)
 
     for epoch in range(cfg.epochs):
         model.train()
@@ -179,7 +177,7 @@ def train_regressor(
             labels = batch.pop("labels")
             with torch.autocast("cuda", dtype=torch.bfloat16):
                 logits = model(**batch).logits
-            loss = torch.nn.functional.mse_loss(logits.float(), labels)
+            loss = loss_fn(logits.float(), labels)
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             optim.step()
@@ -189,20 +187,19 @@ def train_regressor(
             step += 1
 
             if step % eval_every == 0 or step == total:
-                pred = predict_scaled(model, tokenizer, val_texts, cfg)
-                val_mse = ((pred - y_val_s) ** 2).mean(0)
+                criterion, metrics = val_eval(predict_scaled(model, tokenizer, val_texts, cfg))
                 rec = {"step": step, "epoch": step / len(train_dl),
-                       "train_loss": float(np.mean(running)), "val_loss": float(val_mse.sum()),
+                       "train_loss": float(np.mean(running)), **metrics,
                        "minutes": (time.time() - t0) / 60}
-                rec.update({f"val_mse_{j}": float(v) for j, v in enumerate(val_mse)})
                 history.append(rec)
                 running = []
-                improved = rec["val_loss"] < best
+                improved = criterion < best
                 if improved:
-                    best = rec["val_loss"]
+                    best = criterion
                     model.save_pretrained(out_dir)
                     tokenizer.save_pretrained(out_dir)
-                print(f"epoch {rec['epoch']:.2f}  train {rec['train_loss']:.4f}  val {rec['val_loss']:.4f}"
+                shown = "  ".join(f"{k} {v:.4f}" for k, v in metrics.items() if not k.startswith("val_mse_"))
+                print(f"epoch {rec['epoch']:.2f}  train {rec['train_loss']:.4f}  {shown}"
                       f"{'  *' if improved else ''}  {rec['minutes']:.1f} мин", flush=True)
                 model.train()
 
@@ -210,11 +207,72 @@ def train_regressor(
     del model
     torch.cuda.empty_cache()
     model = AutoModelForSequenceClassification.from_pretrained(out_dir).to("cuda")
-    return model, tokenizer, scaler, pd.DataFrame(history)
+    return model, tokenizer, pd.DataFrame(history)
+
+
+def train_regressor(
+    train_texts,
+    y_train: np.ndarray,
+    val_texts,
+    y_val: np.ndarray,
+    cfg: TrainConfig,
+    run_name: str,
+):
+    """Дообучает модель на стандартизованных таргетах (n × k), отбор лучшего чекпойнта по val MSE.
+
+    Возвращает (model, tokenizer, scaler, history). Лучшие веса сохраняются в models/<run_name>/.
+    """
+    y_train, y_val = np.asarray(y_train, np.float32), np.asarray(y_val, np.float32)
+    scaler = Scaler(y_train)
+    y_val_s = scaler.transform(y_val)
+
+    def val_eval(pred):
+        val_mse = ((pred - y_val_s) ** 2).mean(0)
+        metrics = {"val_loss": float(val_mse.sum())}
+        metrics.update({f"val_mse_{j}": float(v) for j, v in enumerate(val_mse)})
+        return metrics["val_loss"], metrics
+
+    model, tokenizer, history = _fine_tune(
+        train_texts, scaler.transform(y_train), val_texts, val_eval,
+        torch.nn.functional.mse_loss, y_train.shape[1], "regression", cfg, run_name,
+    )
+    return model, tokenizer, scaler, history
+
+
+def train_classifier(
+    train_texts,
+    y_train,
+    val_texts,
+    y_val,
+    n_classes: int,
+    cfg: TrainConfig,
+    run_name: str,
+):
+    """Дообучает классификатор (cross-entropy), отбор лучшего чекпойнта по val accuracy.
+
+    Возвращает (model, tokenizer, history). Лучшие веса сохраняются в models/<run_name>/.
+    """
+    y_train, y_val = np.asarray(y_train, np.int64), np.asarray(y_val, np.int64)
+
+    def val_eval(logits):
+        val_ce = float(torch.nn.functional.cross_entropy(torch.tensor(logits), torch.tensor(y_val)))
+        val_acc = float((logits.argmax(1) == y_val).mean())
+        return -val_acc, {"val_loss": val_ce, "val_acc": val_acc}
+
+    return _fine_tune(
+        train_texts, y_train, val_texts, val_eval,
+        torch.nn.functional.cross_entropy, n_classes, "single_label_classification", cfg, run_name,
+    )
+
+
+@torch.no_grad()
+def predict_proba(model, tokenizer, texts, cfg: TrainConfig) -> np.ndarray:
+    """Вероятности классов (n × n_classes)."""
+    return torch.softmax(torch.from_numpy(predict_scaled(model, tokenizer, texts, cfg)), dim=1).numpy()
 
 
 def load_finetuned(run_name: str):
-    """Лучший чекпойнт из models/<run_name>/ (сохраняется train_regressor)."""
+    """Лучший чекпойнт из models/<run_name>/ (сохраняется train_regressor / train_classifier)."""
     from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
     path = MODELS_DIR / run_name
