@@ -77,3 +77,17 @@ def points_to_class(points: pd.Series, n_classes: int) -> pd.Series:
     else:
         raise ValueError("n_classes должно быть 2 или 4")
     return pd.cut(points, bins=bins, labels=False).astype(int)
+
+
+def score_to_class(pred, n_classes: int) -> np.ndarray:
+    """Непрерывный прогноз оценки -> класс с теми же границами, что у points_to_class.
+
+    Границы посередине между целыми баллами: 89.5 для 2 классов; 84.5, 89.5, 94.5 для 4 классов.
+    """
+    if n_classes == 2:
+        edges = [89.5]
+    elif n_classes == 4:
+        edges = [84.5, 89.5, 94.5]
+    else:
+        raise ValueError("n_classes должно быть 2 или 4")
+    return np.digitize(np.asarray(pred, dtype=float), edges)

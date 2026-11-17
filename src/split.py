@@ -71,3 +71,12 @@ def load_iacis_splits(
         subset[subset["split"] == n].drop(columns="split").reset_index(drop=True)
         for n in ("train", "val", "test")
     )
+
+
+def iacis_test_mask(test: pd.DataFrame) -> pd.Series:
+    """Строки основного test, входящие в подвыборку IACIS.
+
+    Описания уникальны после очистки, поэтому сопоставляем по тексту отзыва.
+    """
+    _, _, i_test = load_iacis_splits()
+    return test["description"].isin(i_test["description"])

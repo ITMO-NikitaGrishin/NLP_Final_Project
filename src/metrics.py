@@ -73,6 +73,11 @@ def save_predictions(experiment: str, target: str, index, y_true, y_pred) -> Non
     )
 
 
+def load_predictions(experiment: str, target: str) -> pd.DataFrame:
+    """Предсказания на test, сохранённые save_predictions (y_true, y_pred; индекс как у test)."""
+    return pd.read_parquet(METRICS_FILE.parent / "predictions" / f"{experiment}__{target}.parquet")
+
+
 def results_table(target: str) -> pd.DataFrame:
     """Сводная таблица эксперимент × метрика для одного таргета."""
     df = load_metrics()

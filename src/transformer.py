@@ -213,6 +213,17 @@ def train_regressor(
     return model, tokenizer, scaler, pd.DataFrame(history)
 
 
+def load_finetuned(run_name: str):
+    """Лучший чекпойнт из models/<run_name>/ (сохраняется train_regressor)."""
+    from transformers import AutoModelForSequenceClassification, AutoTokenizer
+
+    path = MODELS_DIR / run_name
+    if not path.exists():
+        raise FileNotFoundError(f"{path} не найден: сначала запустите ноутбук 04")
+    model = AutoModelForSequenceClassification.from_pretrained(path).to("cuda")
+    return model, AutoTokenizer.from_pretrained(path)
+
+
 def predict(model, tokenizer, scaler: Scaler, texts, cfg: TrainConfig) -> np.ndarray:
     """Предсказания в исходной шкале таргетов (n × k)."""
     return scaler.inverse(predict_scaled(model, tokenizer, texts, cfg))
