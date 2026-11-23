@@ -18,7 +18,7 @@ FILENAME = "winemag-data-130k-v2.csv"
 RAW_DIR = Path(__file__).resolve().parent / "raw"
 
 
-def main() -> None:
+def main():
     RAW_DIR.mkdir(parents=True, exist_ok=True)
     target = RAW_DIR / FILENAME
     if target.exists():
