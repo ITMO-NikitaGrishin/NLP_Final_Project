@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import pickle
 import re
-from collections.abc import Sequence
 
 import numpy as np
 import pandas as pd
@@ -15,7 +14,7 @@ SHAP_DIR = DATA_PROCESSED / "shap"
 _PUNCT = re.compile(r"^[^\w]+|[^\w]+$")
 
 
-def explain(run_name: str, texts: Sequence[str], scaler: Scaler, output_names: Sequence[str],
+def explain(run_name: str, texts: list[str], scaler: Scaler, output_names: list[str],
             cfg: TrainConfig | None = None, batch_size: int = 128):
     """SHAP-значения (PartitionExplainer по токенам) для модели из models/<run_name>/.
 
