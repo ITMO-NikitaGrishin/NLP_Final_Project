@@ -30,9 +30,9 @@ def load_clean() -> pd.DataFrame:
 
 def filter_subset(
     df: pd.DataFrame,
-    countries: list,
-    varieties: list,
-    tasters: list,
+    countries: list[str],
+    varieties: list[str],
+    tasters: list[str],
 ) -> pd.DataFrame:
     """Подвыборка по условиям статьи IACIS 2022 (12 стран, 26 сортов, 12 дегустаторов).
 
