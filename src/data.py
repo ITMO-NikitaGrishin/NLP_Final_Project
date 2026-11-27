@@ -1,8 +1,6 @@
 """Загрузка и подготовка данных (этап 0)."""
 from __future__ import annotations
 
-from collections.abc import Iterable
-
 import numpy as np
 import pandas as pd
 
@@ -32,9 +30,9 @@ def load_clean() -> pd.DataFrame:
 
 def filter_subset(
     df: pd.DataFrame,
-    countries: Iterable[str],
-    varieties: Iterable[str],
-    tasters: Iterable[str],
+    countries: list[str],
+    varieties: list[str],
+    tasters: list[str],
 ) -> pd.DataFrame:
     """Подвыборка по условиям статьи IACIS 2022 (12 стран, 26 сортов, 12 дегустаторов).
 

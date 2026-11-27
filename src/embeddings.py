@@ -1,8 +1,6 @@
 """Эмбеддинги текста через sentence-transformers с кэшем на диске (эксперимент 4)."""
 from __future__ import annotations
 
-from collections.abc import Sequence
-
 import numpy as np
 import pandas as pd
 
@@ -16,7 +14,7 @@ def _cache_path(model_name: str, split: str):
 
 
 def encode(
-    texts: Sequence[str],
+    texts: list[str],
     model_name: str,
     batch_size: int = 128,
     max_length: int = 256,
